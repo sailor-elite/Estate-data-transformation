@@ -152,7 +152,12 @@ CITIES_GEO = {
     'GOŁASZE': {'lat': 52.9833, 'lon': 22.5000},
     'KRZEWO': {'lat': 53.1500, 'lon': 22.3667},
     'STARY GROMADZYN': {'lat': 53.4000, 'lon': 21.9167},
-    'KARWOWO': {'lat': 53.2667, 'lon': 22.3833}
+    'KARWOWO': {'lat': 53.2667, 'lon': 22.3833},
+    'OBRYTKI': {'lat':	53.3687798,'lon':22.2742335},
+    'ZABAWKA': {'lat' :53.1995772, 'lon': 22.1571153},
+    'SIEBURCZYN': 	{ 'lat' : 53.2414279, 'lon' : 22.4342496},
+    'SZÓSTAKI' : { 'lat' :53.2833309, 'lon' : 22.4569495},
+    'GÓRKI-SYPNIEWO' : { 'lat' : 53.273853, 'lon' : 22.1353291}
 }
 
 
@@ -279,5 +284,54 @@ print(data["offers"].null_count())
 
 data["offers"] = data["offers"].with_columns(pl.col("DATE_ADDED").fill_null(pl.col("LAST_UPDATED"))
 )
+
+data["offers"] = data["offers"].with_columns(
+    pl.col("DATE_ADDED").dt.strftime("%A").alias("DAY_NAME_EN")
+)
+
+data["offers"].head(5)
+
+data["offers"].null_count()
+
+data["offers"].filter(pl.col("LAT").is_null())["CITY"].unique().to_list()
+
+# ## TYTAN
+
+data["offers_tytan"].head(2)
+
+data["offers_tytan"] = data["offers_tytan"].with_columns(
+    pl.col(["LAST_UPDATED", "DATE_ADDED"]).str.to_date(format="%Y-%m-%d")
+            )
+
+data["offers_tytan"] = data["offers_tytan"].rename({"LOCATION":"CITY"})
+
+data["offers_tytan"] = data["offers_tytan"].with_columns(
+    pl.col("CITY").str.to_uppercase()
+)
+
+data["offers_tytan"] = data["offers_tytan"].with_columns(
+    pl.col("DATE_ADDED").dt.strftime("%A").alias("DAY_NAME_EN")
+)
+
+# +
+geo_df = pl.DataFrame([
+    {"CITY": k, "LAT": v["lat"], "LON": v["lon"]} 
+    for k, v in CITIES_GEO.items()
+])
+
+data["offers_tytan"] = data["offers_tytan"].join(geo_df, on="CITY", how="left")
+# -
+
+data["offers_tytan"].filter(pl.col("LAT").is_null())["CITY"].unique().to_list()
+
+# # GRALCZYK
+
+data["offers_gralczyk"] = data["offers_gralczyk"].rename({"FIRST_ADDED":"DATE_ADDED"})
+
+data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
+    pl.col(["LAST_UPDATED", "DATE_ADDED"]).str.to_date(format="%Y-%m-%d")
+            )
+
+
 
 
