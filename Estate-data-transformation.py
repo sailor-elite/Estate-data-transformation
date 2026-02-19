@@ -332,6 +332,21 @@ data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
     pl.col(["LAST_UPDATED", "DATE_ADDED"]).str.to_date(format="%Y-%m-%d")
             )
 
+data["offers_gralczyk"] = data["offers_gralczyk"].rename({"Cena":"PRICE"})
+data["offers_gralczyk"] = data["offers_gralczyk"].rename({"Cena za m2":"PRICE_M2"})
 
+
+data["offers_gralczyk"] = data["offers_gralczyk"].rename({"Powierzchnia":"AREA_M2"})
+
+
+data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
+    pl.col("AREA_M2")
+    .str.replace("  m2", "")
+    .str.replace(" ", "")
+    .str.replace(",", ".")       
+    .cast(pl.Float64)
+)
+
+data["offers_gralczyk"]
 
 
