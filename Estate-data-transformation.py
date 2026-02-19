@@ -157,7 +157,13 @@ CITIES_GEO = {
     'ZABAWKA': {'lat' :53.1995772, 'lon': 22.1571153},
     'SIEBURCZYN': 	{ 'lat' : 53.2414279, 'lon' : 22.4342496},
     'SZÓSTAKI' : { 'lat' :53.2833309, 'lon' : 22.4569495},
-    'GÓRKI-SYPNIEWO' : { 'lat' : 53.273853, 'lon' : 22.1353291}
+    'GÓRKI-SYPNIEWO' : { 'lat' : 53.273853, 'lon' : 22.1353291},
+    'ŚNIADOWO': 	{'lat':53.0386233, 'lon':21.9902764},
+    'SIESTRZANKI': { 'lat':53.306823, 'lon': 22.4139482},
+    'BUDY MIKOłAJKA': { 'lat': 53.255353, 'lon' : 22.1711752},
+    'MODZELE SKUDOSZE': { 'lat' : 53.0550814, 'lon': 22.1775928},
+    'PIĄTNICA WŁOŚCIAŃSKA': { 'lat' :53.1859359, 'lon': 22.1050388},
+    'RZADKOWO': {'lat':53.2219677, 'lon':22.143627}
 }
 
 
@@ -235,6 +241,12 @@ def load_data_to_df(db_name: str, table_name: str) -> pl.DataFrame | None:
         if conn:
             conn.close()
             print("DB connection closed.")
+
+
+def simplify_text(text: str) -> str:
+    trans = str.maketrans("ĄĆĘŁŃÓŚŹŻ", "ACELNOSZZ")
+    return text.upper().translate(trans)
+
 
 
 # # DOWNLOADING DATA
@@ -348,5 +360,135 @@ data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
 )
 
 data["offers_gralczyk"]
+
+data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
+    pl.col("ID")
+    .str.replace_all("dzialka", "")
+    .str.replace_all("-", " ")      
+    .str.strip_chars()              
+    .str.to_uppercase()             
+    .alias("CITY")                  
+)
+
+data["offers_gralczyk"]
+
+# +
+data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
+    pl.col("CITY")
+    .str.to_uppercase()
+    .str.replace_all("Ł", "L")
+    .str.replace_all("Ó", "O")
+    .str.replace_all("Ś", "S")
+    .str.replace_all("Ż", "Z")
+    .str.replace_all("Ź", "Z")
+    .str.replace_all("Ć", "C")
+    .str.replace_all("Ń", "N")
+    .str.replace_all("Ą", "A")
+    .str.replace_all("Ę", "E")
+    .alias("SEARCH_CITY")
+)
+
+condition = pl.when(False).then(None)
+
+for original_city in CITIES_GEO.keys():
+    simple_city = simplify_text(original_city) 
+    
+    condition = condition.when(
+        pl.col("SEARCH_CITY").str.contains(simple_city)
+    ).then(pl.lit(original_city)) 
+
+data["offers_gralczyk"] = data["offers_gralczyk"].with_columns(
+    condition.alias("CLEAN_CITY")
+)
+
+data["offers_gralczyk"] = data["offers_gralczyk"].drop("SEARCH_CITY")
+# -
+
+data["offers_gralczyk"].filter(pl.col("CLEAN_CITY").is_null())["CITY"].unique().to_list()
+
+data["offers_gralczyk"] = data["offers_gralczyk"].drop( ["CITY"])
+data["offers_gralczyk"] = data["offers_gralczyk"].rename({"CLEAN_CITY":"CITY"})
+
+data["offers_gralczyk"] = data["offers_gralczyk"].join(geo_df, on="CITY", how="left")
+
+data["offers_gralczyk"].head(2)
+
+# # POLNOC
+
+data["offers_polnoc"] = data["offers_polnoc"].rename({"FIRST_ADDED":"DATE_ADDED"})
+
+data["offers_polnoc"] = data["offers_polnoc"].with_columns(
+    pl.col(["LAST_UPDATED", "DATE_ADDED"]).str.to_date(format="%Y-%m-%d")
+            )
+
+data["offers_polnoc"] = data["offers_polnoc"].rename({"Cena":"PRICE"})
+data["offers_polnoc"] = data["offers_polnoc"].rename({"Cena za m2":"PRICE_M2"})
+data["offers_polnoc"] = data["offers_polnoc"].rename({"Powierzchnia działki":"AREA_M2"})
+
+
+data["offers_polnoc"] = data["offers_polnoc"].filter(
+    (pl.col("AREA_M2").is_not_null()) & 
+    (pl.col("ID").str.contains("dzialka"))
+)
+
+data["offers_polnoc"]
+
+data["offers_polnoc"] = data["offers_polnoc"].with_columns(
+    pl.col("ID")
+    .str.replace_all("dzialka", "")
+    .str.replace_all("-", " ")      
+    .str.strip_chars()              
+    .str.to_uppercase()             
+    .alias("CITY")                  
+)
+
+data["offers_polnoc"]
+
+data["offers_polnoc"] = data["offers_polnoc"].with_columns(
+    pl.col(["AREA_M2", "PRICE_M2", "PRICE"]).cast(pl.Float64)
+)
+
+# +
+data["offers_polnoc"] = data["offers_polnoc"].with_columns(
+    pl.col("CITY")
+    .str.to_uppercase()
+    .str.replace_all("Ł", "L")
+    .str.replace_all("Ó", "O")
+    .str.replace_all("Ś", "S")
+    .str.replace_all("Ż", "Z")
+    .str.replace_all("Ź", "Z")
+    .str.replace_all("Ć", "C")
+    .str.replace_all("Ń", "N")
+    .str.replace_all("Ą", "A")
+    .str.replace_all("Ę", "E")
+    .alias("SEARCH_CITY")
+)
+
+condition = pl.when(False).then(None)
+
+for original_city in CITIES_GEO.keys():
+    simple_city = simplify_text(original_city) 
+    
+    condition = condition.when(
+        pl.col("SEARCH_CITY").str.contains(simple_city)
+    ).then(pl.lit(original_city)) 
+
+data["offers_polnoc"] = data["offers_polnoc"].with_columns(
+    condition.alias("CLEAN_CITY")
+)
+
+data["offers_polnoc"] = data["offers_polnoc"].drop("SEARCH_CITY")
+# -
+
+data["offers_polnoc"].filter(pl.col("CLEAN_CITY").is_null())["CITY"].unique().to_list()
+
+data["offers_polnoc"] = data["offers_polnoc"].drop( ["CITY"])
+data["offers_polnoc"] = data["offers_polnoc"].rename({"CLEAN_CITY":"CITY"})
+
+data["offers_polnoc"] = data["offers_polnoc"].join(geo_df, on="CITY", how="left")
+
+data["offers_polnoc"]
+
+# # 4LOMZA
 
 
