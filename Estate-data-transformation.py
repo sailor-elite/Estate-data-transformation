@@ -33,6 +33,10 @@ creds = config["mikrus"]
 TABLES = ["offers", "offers_tytan", "offers_gralczyk", "offers_polnoc", "analyzed_offers" ]
 
 pl.Config.set_tbl_rows(10)
+pl.Config.STR_SET_ELIDED_BOUND = 500 
+pl.Config.TT_CHOP_STR_BOUND = 500     
+pl.Config.TABLE_WIDTH = 1000     
+pl.Config.set_fmt_str_lengths(1000)
 
 CITIES_GEO = {
     'ELŻBIECIN': {'lat': 53.1672, 'lon': 22.1231},
@@ -96,6 +100,7 @@ CITIES_GEO = {
     'JARNUTY': {'lat': 53.1167, 'lon': 21.6833},
     'TUROŚL': {'lat': 53.3853, 'lon': 21.7258},
     'STARE KUPISKI': {'lat': 53.1972, 'lon': 21.9964},
+    'KUPISKI STARE': {'lat': 53.1972, 'lon': 21.9964},
     'DŁUGOBÓRZ PIERWSZY': {'lat': 52.9667, 'lon': 22.2167},
     'WIKTORZYN': {'lat': 52.8833, 'lon': 21.7500},
     'KACZYNEK': {'lat': 53.0114, 'lon': 21.6831},
@@ -163,7 +168,25 @@ CITIES_GEO = {
     'BUDY MIKOłAJKA': { 'lat': 53.255353, 'lon' : 22.1711752},
     'MODZELE SKUDOSZE': { 'lat' : 53.0550814, 'lon': 22.1775928},
     'PIĄTNICA WŁOŚCIAŃSKA': { 'lat' :53.1859359, 'lon': 22.1050388},
-    'RZADKOWO': {'lat':53.2219677, 'lon':22.143627}
+    'RZADKOWO': {'lat':53.2219677, 'lon':22.143627},
+    'PIĄTNICA' : {'lat':53.21542775, 'lon':22.177244553669112},
+    'ZOSIN' : {'lat': 53.141755, 'lon': 22.1116481},
+    'MORGOWNIKI': {'lat': 53.2275, 'lon': 21.8903},       
+    'JANÓW': {'lat': 53.1558, 'lon': 22.1353},            
+    'JĘCZNIKI': {'lat': 53.5358, 'lon': 20.9414},         
+    'WYK': {'lat': 53.2758, 'lon': 21.9058},              
+    'PTAKI': {'lat': 53.3058, 'lon': 21.8481},           
+    'ZBÓJNA': {'lat': 53.2358, 'lon': 21.8153},          
+    'BUDNE': {'lat': 53.3342, 'lon': 22.4286},            
+    'NOWY KRZEW': {'lat': 53.1158, 'lon': 22.2542},       
+    'KOZIOŁ': {'lat': 53.4258, 'lon': 21.8986},          
+    'MIASTKOWO': {'lat': 53.1508, 'lon': 21.8386},        
+    'DĘBOWO': {'lat': 53.6058, 'lon': 22.9253},           
+    'BUDY KRANOCKIE': {'lat': 53.1958, 'lon': 22.1486},  
+    'STARA ŁOMŻA': {'lat': 53.1658, 'lon': 22.0986},  
+    'STAREJ ŁOMŻY': {'lat': 53.1658, 'lon': 22.0986},
+    'SIEMIĘ NADRZECZNE': {'lat': 53.1858, 'lon': 22.0253}, 
+    'WYRZYKI': {'lat': 53.1058, 'lon': 22.1553}
 }
 
 
@@ -484,11 +507,134 @@ data["offers_polnoc"].filter(pl.col("CLEAN_CITY").is_null())["CITY"].unique().to
 
 data["offers_polnoc"] = data["offers_polnoc"].drop( ["CITY"])
 data["offers_polnoc"] = data["offers_polnoc"].rename({"CLEAN_CITY":"CITY"})
-
 data["offers_polnoc"] = data["offers_polnoc"].join(geo_df, on="CITY", how="left")
 
 data["offers_polnoc"]
 
 # # 4LOMZA
+
+data["analyzed_offers"] = data["analyzed_offers"].filter((pl.col("ESTATE_TYPE").str.contains("DZIAŁKA BUDOWLANA"))&
+                               (pl.col("OFFER_TYPE").str.contains("SPRZEDAZ")))
+
+data["analyzed_offers"] = data["analyzed_offers"].unique(subset=["ID"])
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col(["LAST_UPDATED", "DATE_ADDED"]).str.to_date(format="%Y-%m-%d")
+            )
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col([ "ANNOUNCE_DATE"]).str.to_date(format="%Y-%m-%d")
+            )
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col("AREA_M2")
+    .str.replace(" m2", "")
+    .str.replace(",", ".")
+    .cast(pl.Float64, strict=False)  
+)
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col("PRICE")
+    .str.replace(" m2", "")
+    .str.replace(",", ".")
+    .cast(pl.Float64, strict=False)  
+)
+
+data["analyzed_offers"]
+
+# +
+stats = data["analyzed_offers"].select([
+    pl.col("AREA_M2").quantile(0.25).alias("q1"),
+    pl.col("AREA_M2").quantile(0.75).alias("q3")
+])
+
+q1 = stats[0, "q1"]
+q3 = stats[0, "q3"]
+iqr = q3 - q1
+
+lower_bound = q1 - 1.5 * iqr
+upper_bound = q3 + 1.5 * iqr
+
+print(f"Statystyczne granice dla AREA_M2: {lower_bound:.2f} - {upper_bound:.2f}")
+
+outliery_statystyczne = data["analyzed_offers"].filter(
+    (pl.col("AREA_M2") < lower_bound) | (pl.col("AREA_M2") > upper_bound)
+)
+# -
+
+corrected_outliers = outliery_statystyczne.with_columns(
+    pl.when(
+        (pl.col("TEXT").str.contains(f"(?i)ar")) | 
+        (pl.col("TEXT").str.contains(f"(?i)ara"))   
+    )
+    .then(pl.col("AREA_M2") / 10)  
+    .otherwise(pl.col("AREA_M2"))
+    .alias("AREA_M2_CORRECTED")
+).select(["ID", "AREA_M2_CORRECTED"])
+
+# +
+data["analyzed_offers"] = data["analyzed_offers"].join(
+    corrected_outliers, on="ID", how="left"
+)
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col("AREA_M2_CORRECTED").fill_null(pl.col("AREA_M2")).alias("AREA_M2")
+).drop("AREA_M2_CORRECTED")
+# -
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    (pl.col("PRICE") / pl.col("AREA_M2")).round(2).alias("PRICE_M2")
+)
+
+data["analyzed_offers"] = data["analyzed_offers"].rename({"LOCATION":"CITY"})
+
+# +
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col("CITY")
+    .str.to_uppercase()
+    .str.replace_all("Ł", "L")
+    .str.replace_all("Ó", "O")
+    .str.replace_all("Ś", "S")
+    .str.replace_all("Ż", "Z")
+    .str.replace_all("Ź", "Z")
+    .str.replace_all("Ć", "C")
+    .str.replace_all("Ń", "N")
+    .str.replace_all("Ą", "A")
+    .str.replace_all("Ę", "E")
+    .alias("SEARCH_CITY")
+)
+
+condition = pl.when(False).then(None)
+
+for original_city in CITIES_GEO.keys():
+    simple_city = simplify_text(original_city) 
+    
+    condition = condition.when(
+        pl.col("SEARCH_CITY").str.contains(simple_city)
+    ).then(pl.lit(original_city)) 
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    condition.alias("CLEAN_CITY")
+)
+
+data["analyzed_offers"] = data["analyzed_offers"].drop("SEARCH_CITY")
+# -
+
+data["analyzed_offers"].filter(pl.col("CLEAN_CITY").is_null())["CITY"].unique().to_list()
+
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.when(pl.col("CITY").str.to_uppercase() == "BRAK")
+    .then(None) 
+    .when(pl.col("CLEAN_CITY").is_null()) 
+    .then(pl.lit("ŁOMŻA")) 
+    .otherwise(pl.col("CLEAN_CITY")) 
+    .alias("CLEAN_CITY")
+)
+
+data["analyzed_offers"]
+
+data["analyzed_offers"] = data["analyzed_offers"].drop( ["CITY"])
+data["analyzed_offers"] = data["analyzed_offers"].rename({"CLEAN_CITY":"CITY"})
+data["analyzed_offers"] = data["analyzed_offers"].join(geo_df, on="CITY", how="left")
 
 
