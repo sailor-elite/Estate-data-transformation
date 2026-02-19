@@ -18,6 +18,7 @@
 import polars as pl
 import sqlite3
 import tomllib
+import glob
 
 from datetime import datetime
 import os
@@ -70,9 +71,25 @@ def download_db():
         ssh.close()
 
 
+def get_latest_db_path(folder="db"):
+    files = glob.glob(os.path.join(folder, "*.db"))
+    
+    if not files:
+        print("Not found file with extension 'db'!")
+        return None
+    
+    latest_file = max(files)
+    print(f"newest file: {latest_file}")
+    return latest_file
+
 
 # # DOWNLOADING DATA
 
 download_db()
+
+DB_NAME = get_latest_db_path()
+
+
+data = {}
 
 
