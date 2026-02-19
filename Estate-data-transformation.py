@@ -30,6 +30,7 @@ with open("secrets.toml", "rb") as f:
     config = tomllib.load(f)
 creds = config["mikrus"]
 
+TABLES = ["offers", "offers_tytan", "offers_gralczyk", "offers_polnoc", "analyzed_offers" ]
 
 
 # # HELPER FUNCTIONS
@@ -83,6 +84,31 @@ def get_latest_db_path(folder="db"):
     return latest_file
 
 
+def load_data_to_df(db_name: str, table_name: str) -> pl.DataFrame | None:
+    conn = None
+    try:
+        conn = sqlite3.connect(db_name)
+        print(f"DB connected: {db_name}")
+
+        query = f"SELECT * FROM {table_name}"
+        df = pl.read_database(query, conn)
+
+        print(f"DF loaded: {table_name}")
+        print(f"DF shape: {df.shape}")
+        return df
+
+    except sqlite3.Error as e:
+        print(f"SQLite error: {e}")
+        return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+            print("DB connection closed.")
+
+
 # # DOWNLOADING DATA
 
 download_db()
@@ -91,5 +117,10 @@ DB_NAME = get_latest_db_path()
 
 
 data = {}
+
+for TABLE in TABLES:
+    data[TABLE] = load_data_to_df(DB_NAME, TABLE)
+
+data.keys()
 
 
