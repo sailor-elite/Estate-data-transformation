@@ -794,6 +794,39 @@ data["Offers_all"] = data["Offers_all"].with_columns(
 )
 # -
 
+# ## Days on market
+
+data["Offers_all"] = data["Offers_all"].with_columns([
+    pl.when(pl.col("DATE_ADDED") > pl.col("LAST_UPDATED"))
+    .then(pl.col("LAST_UPDATED"))
+    .otherwise(pl.col("DATE_ADDED"))
+    .alias("DATE_ADDED"),
+
+    pl.when(pl.col("DATE_ADDED") > pl.col("LAST_UPDATED"))
+    .then(pl.col("DATE_ADDED"))
+    .otherwise(pl.col("LAST_UPDATED"))
+    .alias("LAST_UPDATED")
+])
+
+# +
+data["Offers_all"] = data["Offers_all"].with_columns(
+    (pl.col("LAST_UPDATED").cast(pl.Date) - pl.col("DATE_ADDED").cast(pl.Date))
+    .dt.total_days()
+    .alias("DAYS_ON_MARKET")
+)
+
+data["Offers_all"] = data["Offers_all"].with_columns(
+    pl.when(pl.col("DAYS_ON_MARKET") <= 7)
+    .then(pl.lit("New Offer"))
+    .when(pl.col("DAYS_ON_MARKET") <= 30)
+    .then(pl.lit("Active"))
+    .when(pl.col("DAYS_ON_MARKET") <= 90)
+    .then(pl.lit("Stale"))
+    .otherwise(pl.lit("Old/Negotiable"))
+    .alias("MARKET_STATUS")
+)
+# -
+
 data["Offers_all"]
 
 
