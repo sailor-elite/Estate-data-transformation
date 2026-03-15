@@ -859,6 +859,11 @@ data["Time_series_stats"] = (
     .sort("ACTIVE_DAY")
 )
 
+start_date = data["Offers_all"]["LAST_UPDATED"].min()
+print(start_date)
+
+data["Time_series_stats"] = data["Time_series_stats"].filter(pl.col("ACTIVE_DAY") >= start_date)
+
 data["Time_series_stats"]
 
 
