@@ -186,7 +186,9 @@ CITIES_GEO = {
     'STARA ŁOMŻA': {'lat': 53.1658, 'lon': 22.0986},  
     'STAREJ ŁOMŻY': {'lat': 53.1658, 'lon': 22.0986},
     'SIEMIĘ NADRZECZNE': {'lat': 53.1858, 'lon': 22.0253}, 
-    'WYRZYKI': {'lat': 53.1058, 'lon': 22.1553}
+    'WYRZYKI': {'lat': 53.1058, 'lon': 22.1553},
+    'ROGIENICE WIELKIE': {'lat':53.1616, 'lon':22.044},
+    'KOBYLIN': {'lat':53.293171789627955, 'lon': 22.14513394107225,}
 }
 
 
@@ -631,10 +633,60 @@ data["analyzed_offers"] = data["analyzed_offers"].with_columns(
     .alias("CLEAN_CITY")
 )
 
-data["analyzed_offers"]
-
 data["analyzed_offers"] = data["analyzed_offers"].drop( ["CITY"])
 data["analyzed_offers"] = data["analyzed_offers"].rename({"CLEAN_CITY":"CITY"})
 data["analyzed_offers"] = data["analyzed_offers"].join(geo_df, on="CITY", how="left")
+
+data.keys()
+
+# # Concating all datasets
+
+for key in data.keys():
+    print (key, data[key].columns)
+
+target_cols = ["ID", "DATE_ADDED", "LAST_UPDATED", "AREA_M2", "PRICE_M2", "CITY", "LAT", "LON", "PRICE"]
+
+# +
+processed_dfs = []
+
+for key, df in data.items():
+    temp_df = df.rename({"VALUE": "PRICE"}) if "VALUE" in df.columns else df
+    temp_df = temp_df.select(target_cols).with_columns([
+        pl.col("ID").cast(pl.String),        
+        pl.col("PRICE").cast(pl.Float64),  
+        pl.col("AREA_M2").cast(pl.Float64),
+        pl.col("PRICE_M2").cast(pl.Float64),
+        pl.col("LAT").cast(pl.Float64),
+        pl.col("LON").cast(pl.Float64),
+        pl.lit(key).alias("SOURCE")
+    ])
+    processed_dfs.append(temp_df)
+
+data["Offers_all"] = pl.concat(processed_dfs)
+# -
+
+data["Offers_all"] = data["Offers_all"].with_columns([
+    pl.when(pl.col("PRICE") < 15_000)
+    .then(None)
+    .otherwise(pl.col("PRICE"))
+    .alias("PRICE"),
+]).with_columns([
+    pl.when(pl.col("PRICE").is_null())
+    .then(None)
+    .otherwise(pl.col("PRICE_M2"))
+    .alias("PRICE_M2")
+])
+
+data["Offers_all"]
+
+# +
+# Filtrujemy oferty powyżej 5 milionów
+expensive_plots = data["Offers_all"].filter(pl.col("PRICE") > 5_000_000)
+
+# Wyświetlamy najważniejsze parametry, żeby ocenić ich realność
+print(expensive_plots.select([
+    "ID", "PRICE", "AREA_M2", "PRICE_M2", "CITY", "SOURCE"
+]))
+# -
 
 
