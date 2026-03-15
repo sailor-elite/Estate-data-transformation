@@ -829,4 +829,36 @@ data["Offers_all"] = data["Offers_all"].with_columns(
 
 data["Offers_all"]
 
+# ## Price time series
+
+data["Offers_daily"] = data["Offers_all"].with_columns(
+    pl.date_ranges(
+        start=pl.col("DATE_ADDED"),
+        end=pl.col("LAST_UPDATED"),
+        interval="1d",
+        eager=False
+    ).alias("ACTIVE_DAY")
+)
+
+data["Time_series"] = data["Offers_daily"].explode("ACTIVE_DAY")
+
+data["Time_series_stats"] = (
+    data["Time_series"]
+    .group_by("ACTIVE_DAY")
+    .agg([
+        pl.count("ID").alias("TOTAL_ACTIVE_OFFERS"),
+        
+        pl.col("PRICE_M2").mean().round(2).alias("AVG_PRICE_M2"),
+        pl.col("PRICE_M2").median().round(2).alias("MEDIAN_PRICE_M2"),
+        pl.col("PRICE").median().round(2).alias("MEDIAN_PRICE"),
+        pl.col("PRICE").mean().round(2).alias("AVG_PRICE"),
+        pl.col("AREA_M2").mean().round(0).alias("AVG_AREA_M2"),
+        pl.col("AREA_M2").sum().round(0).alias("TOTAL_AREA_ON_MARKET"),
+        pl.col("AREA_M2").median().round(0).alias("MEDIAN_AREA_M2")
+    ])
+    .sort("ACTIVE_DAY")
+)
+
+data["Time_series_stats"]
+
 
