@@ -772,4 +772,28 @@ data["Offers_all"] = add_haversine_distance(data["Offers_all"], LOMZA_LAT, LOMZA
 
 data["Offers_all"]
 
+# ## Size segments
+
+# +
+size_bins = [700.0, 1000.0, 1500.0, 5000.0, 10000.0]
+
+size_labels = [
+    "Tiny/Sub-standard",    
+    "Small Plot",           
+    "Medium Plot",         
+    "Large Plot",           
+    "Investment/Small Farm",
+    "Hectares/Agriculture" 
+]
+
+data["Offers_all"] = data["Offers_all"].with_columns(
+    pl.col("AREA_M2").cut(
+        size_bins, 
+        labels=size_labels
+    ).alias("SIZE_SEGMENT")
+)
+# -
+
+data["Offers_all"]
+
 
