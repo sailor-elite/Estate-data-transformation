@@ -21,7 +21,7 @@ import tomllib
 import glob
 import numpy as np
 
-from datetime import datetime
+from datetime import datetime, date
 import os
 
 import paramiko
@@ -877,9 +877,18 @@ source_mapping = {
 }
 
 data["Offers_all"] = data["Offers_all"].with_columns(
-    pl.col("source")  
+    pl.col("SOURCE")  
     .replace(source_mapping, default="Other")
-    .alias("SOURCE_NAME")
+    .alias("SOURCE")
 )
+
+data["Offers_all"]
+
+# ## Saving dataframes
+
+today = date.today().isoformat()
+
+data["Offers_all"].write_parquet(f"{today}_offers_cleaned_final.parquet")
+data["Time_series_stats"].write_parquet(f"{today}_time_series_pbi.parquet")
 
 
