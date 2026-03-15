@@ -866,4 +866,20 @@ data["Time_series_stats"] = data["Time_series_stats"].filter(pl.col("ACTIVE_DAY"
 
 data["Time_series_stats"]
 
+# # Anonymizing source
+
+source_mapping = {
+    "offers_polnoc": "Website A",
+    "analyzed_offers": "Website B",
+    "offers_tytan": "Website C",
+    "offers_gralczyk": "Website D",
+    "offers": "Website E"
+}
+
+data["Offers_all"] = data["Offers_all"].with_columns(
+    pl.col("source")  
+    .replace(source_mapping, default="Other")
+    .alias("SOURCE_NAME")
+)
+
 
