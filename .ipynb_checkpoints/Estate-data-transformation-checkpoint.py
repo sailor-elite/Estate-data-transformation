@@ -1,0 +1,78 @@
+# ---
+# jupyter:
+#   jupytext:
+#     formats: ipynb,py:light
+#     text_representation:
+#       extension: .py
+#       format_name: light
+#       format_version: '1.5'
+#       jupytext_version: 1.19.1
+#   kernelspec:
+#     display_name: Python 3 (ipykernel)
+#     language: python
+#     name: python3
+# ---
+
+# # CONFIG
+
+import polars as pl
+import sqlite3
+import tomllib
+
+from datetime import datetime
+import os
+
+import paramiko
+from scp import SCPClient
+
+with open("secrets.toml", "rb") as f:
+    config = tomllib.load(f)
+creds = config["mikrus"]
+
+
+
+# # HELPER FUNCTIONS
+
+def download_db():
+    now = datetime.now().strftime("%Y-%m-%d")
+    folder_name = "db"
+    
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
+    
+    local_filename = f"{now}_olx.db"
+    local_full_path = os.path.join(folder_name, local_filename)
+
+    print(f"Connecting {creds['host']}...")
+    
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    
+    try:
+        ssh.connect(
+            hostname=creds["host"],
+            port=creds["port"],
+            username=creds["user"],
+            password=creds["password"]
+        )
+        
+        with SCPClient(ssh.get_transport()) as scp:
+            print(f"Pobieranie {creds['remote_path']} -> {local_full_path}")
+            scp.get(creds["remote_path"], local_full_path)
+            
+        print(f"Database saved as: {local_full_path}")
+        return local_full_path  
+        
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+    finally:
+        ssh.close()
+
+
+
+# # DOWNLOADING DATA
+
+download_db()
+
+
