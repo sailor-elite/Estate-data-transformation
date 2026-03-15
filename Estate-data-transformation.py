@@ -679,14 +679,72 @@ data["Offers_all"] = data["Offers_all"].with_columns([
 
 data["Offers_all"]
 
-# +
-# Filtrujemy oferty powyżej 5 milionów
-expensive_plots = data["Offers_all"].filter(pl.col("PRICE") > 5_000_000)
+# ## Day of the week mapping
 
-# Wyświetlamy najważniejsze parametry, żeby ocenić ich realność
-print(expensive_plots.select([
-    "ID", "PRICE", "AREA_M2", "PRICE_M2", "CITY", "SOURCE"
+week_days = {
+    1: "Poniedziałek",
+    2: "Wtorek",
+    3: "Środa",
+    4: "Czwartek",
+    5: "Piątek",
+    6: "Sobota",
+    7: "Niedziela"
+}
+
+data["Offers_all"] = data["Offers_all"].with_columns([
+    pl.col("DATE_ADDED").cast(pl.Date),
+    pl.col("DATE_ADDED")
+    .dt.weekday()
+    .cast(pl.String) 
+    .replace(week_days)
+    .alias("DAY_NAME_PL")
+])
+
+# ## Cleaning AREA_M2
+
+data["Offers_all"] = data["Offers_all"].with_columns(
+    pl.when(pl.col("AREA_M2") <= 1.0)
+    .then(None)
+    .otherwise(pl.col("AREA_M2"))
+    .alias("AREA_M2")
+)
+
+data["Offers_all"] = data["Offers_all"].with_columns([
+    pl.when(pl.col("AREA_M2") < 100.0)
+    .then(pl.col("AREA_M2") * 100.0)
+    .otherwise(pl.col("AREA_M2"))
+    .alias("AREA_M2")
+]).with_columns([
+    pl.when(pl.col("AREA_M2") < 100.0)
+    .then(None)
+    .otherwise(pl.col("AREA_M2"))
+    .alias("AREA_M2")
+]).with_columns([
+    pl.when((pl.col("PRICE").is_not_null()) & (pl.col("AREA_M2").is_not_null()))
+    .then(pl.col("PRICE") / pl.col("AREA_M2"))
+    .otherwise(None)
+    .alias("PRICE_M2")
+])
+print(data["Offers_all"].filter(pl.col("ID").str.contains("MORGOWNIKI|NOWOGRÓD|Zawady_10")).select([
+    "ID", "AREA_M2", "PRICE", "PRICE_M2"
 ]))
+
+# +
+data["Offers_all"] = data["Offers_all"].with_columns(
+    pl.when(pl.col("ID") == "dzialka-jedwabne-lomzynska")
+    .then(pl.lit(10200.0))
+    .otherwise(pl.col("AREA_M2"))
+    .alias("AREA_M2")
+)
+
+data["Offers_all"] = data["Offers_all"].with_columns(
+    pl.when(pl.col("ID") == "dzialka-jedwabne-lomzynska")
+    .then(pl.col("PRICE") / pl.col("AREA_M2"))
+    .otherwise(pl.col("PRICE_M2"))
+    .alias("PRICE_M2")
+)
 # -
+
+data["Offers_all"]
 
 
