@@ -19,6 +19,7 @@ import polars as pl
 import sqlite3
 import tomllib
 import glob
+import numpy as np
 
 from datetime import datetime
 import os
@@ -272,6 +273,22 @@ def simplify_text(text: str) -> str:
     trans = str.maketrans("ĄĆĘŁŃÓŚŹŻ", "ACELNOSZZ")
     return text.upper().translate(trans)
 
+
+def add_haversine_distance(df, target_lat, target_lon):
+    R = 6371.0
+    lat1 = target_lat * np.pi / 180
+    lon1 = target_lon * np.pi / 180
+
+    return df.with_columns(
+        (
+            2 * R * (
+                (
+                    ((pl.col("LAT") * np.pi / 180 - lat1) / 2).sin()**2 +
+                    pl.lit(np.cos(lat1)) * (pl.col("LAT") * np.pi / 180).cos() * ((pl.col("LON") * np.pi / 180 - lon1) / 2).sin()**2
+                ).sqrt().arcsin()
+            )
+        ).cast(pl.Float64).alias("MAIN_CITY_DIST") 
+    )
 
 
 # # DOWNLOADING DATA
@@ -744,6 +761,14 @@ data["Offers_all"] = data["Offers_all"].with_columns(
     .alias("PRICE_M2")
 )
 # -
+
+data["Offers_all"]
+
+# ## Measuring distance from main_city
+
+LOMZA_LAT = 53.1781
+LOMZA_LON = 22.0592
+data["Offers_all"] = add_haversine_distance(data["Offers_all"], LOMZA_LAT, LOMZA_LON)
 
 data["Offers_all"]
 
