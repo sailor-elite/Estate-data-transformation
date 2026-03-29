@@ -23,8 +23,8 @@
 # ## Opis dostępu do danych i sposób ich pozyskania
 # Proces pozyskiwania danych jest w pełni zautomatyzowany i opiera się na architekturze rozproszonej:
 # 1.  VPS - Skrypt typu Scrapper uruchamiany jest cyklicznie przez harmonogram Cron. Pobrane surowe dane trafiają do plikowej bazy danych.
-# 2.  Przetwarzanie danych przy pomocy Bielik LLM - Dane są przesyłane protokołem SCP do środowiska, gdzie model językowy Bielik-1.5B-v3 dokonuje unifikacji i czyszczenia danych.
-# 3.  Final Processing - Przetworzone dane wracają na VPS (Processed data), skąd są pobierane do końcowej analizy w formacie Parquet.
+# 2.  Przetwarzanie danych przy pomocy Bielik LLM - Dane są przesyłane protokołem SCP do środowiska, gdzie model językowy Bielik-1.5B-v3 dokonuje unifikacji i czyszczenia danych. (https://github.com/sailor-elite/building-plots-bielik-processor)
+# 3.  Final Processing - Przetworzone dane wracają na VPS (Processed data), skąd są pobierane do końcowej analizy w formacie Parquet. (https://github.com/sailor-elite/Estate-data-transformation/blob/master/Estate-data-transformation.ipynb)
 # 4.  Końcowym odbiorcą danych są użytkownicy raportu Power BI, nieumieszczonego w niniejszym Notebook'u.
 #
 # ### Schemat procesu
@@ -73,9 +73,9 @@
 #
 # 1. VPS – A scraper script is executed cyclically via a Cron scheduler. The collected raw data is stored in a file-based database.
 #
-# 2. Data processing using Bielik LLM – The data is transferred via the SCP protocol to an environment where the Bielik-1.5B-v3 language model performs data unification and cleaning.
+# 2. Data processing using Bielik LLM – The data is transferred via the SCP protocol to an environment where the Bielik-1.5B-v3 language model performs data unification and cleaning. (https://github.com/sailor-elite/building-plots-bielik-processor)
 #
-# 3. Final Processing – The processed data is sent back to the VPS (Processed data), from where it is retrieved for final analysis in Parquet format.
+# 3. Final Processing – The processed data is sent back to the VPS (Processed data), from where it is retrieved for final analysis in Parquet format. (https://github.com/sailor-elite/Estate-data-transformation/blob/master/Estate-data-transformation.ipynb)
 #
 # 4. The final recipients of the data are users of a Power BI report, which is not included in this Notebook.
 #
@@ -170,5 +170,52 @@ data["offers"]["SIZE_SEGMENT"].value_counts()
 ax = (data["offers"]["SIZE_SEGMENT"]
       .value_counts()
       .plot(kind="bar", figsize=(10, 6), color="#4C72B0", edgecolor="black"))
+
+# %% [markdown]
+# | Segment                    | Zakres powierzchni/ Area (m²) | Liczba ofert / Number of offers |
+# |----------------------------|--------------------------|--------------|
+# | Tiny / Sub-standard        | < 700                    | 53           |
+# | Small Plot                 | 700 – 1000               | 165          |
+# | Medium Plot                | 1000 – 1500              | 189          |
+# | Large Plot                 | 1500 – 5000              | 107          |
+# | Investment / Small Farm    | 5000 – 10000             | 33           |
+# | Hectares / Agriculture     | > 10000                  | 106          |
+
+# %% [markdown]
+# Analiza struktury wielkości działek wykazuje dominację gruntów o średniej i małej powierzchni. Najliczniejszą grupę stanowią Medium Plots (189 ofert) o metrażu między 1500 $m^2$ a 5000 $m^2$ oraz Small Plots (165 ofert) mieszczące się w przedziale 1000–1500 $m^2$. Jest to typowa charakterystyka rynku podmiejskiego, nastawionego na budownictwo jednorodzinne. Znaczący udział mają również działki o charakterze rolnym/wielkopowierzchniowym (106 ofert powyżej 1 ha), co wskazuje na dużą dostępność gruntów inwestycyjnych poza ścisłą zabudową. Najmniejszą grupę stanowią działki poniżej 700 $m^2$ (Tiny/Sub-standard).
+
+# %% [markdown]
+# The analysis of the plot size structure shows a dominance of medium and small-sized lands. The most numerous groups are Medium Plots (189 offers) with an area between 1,500 $m^2$ and 5,000 $m^2$, and Small Plots (165 offers) ranging from 1,000 to 1,500 $m^2$. This is a typical characteristic of a suburban market focused on single-family housing. There is also a significant share of agricultural/large-scale plots (106 offers over 1 ha), indicating high availability of investment land outside densely built-up areas. The smallest group consists of plots under 700 $m^2$ (Tiny/Sub-standard).
+
+# %% [markdown]
+# ## Where are the most offers?
+
+# %%
+data["offers"]["CITY"].value_counts().nlargest(20)
+
+# %%
+ax = (data["offers"]["CITY"].value_counts().nlargest(20)
+      .plot(kind="bar", figsize=(10, 6), color="#4C72B0", edgecolor="black"))
+
+# %% [markdown]
+# Rozkład geograficzny ofert w badanym zbiorze danych koncentruje się wokół kilku kluczowych punktów. Najwięcej ogłoszeń pochodzi z Łomży, gdzie odnotowano 159 ofert. Kolejną istotną lokalizacją jest Nowogród z liczbą 63 ofert. Znaczącą grupę stanowi również Stara Łomża, która łącznie w różnych wariantach nazewnictwa (Nad Rzeką, Przy Szosie, Starej Łomży) obejmuje 33 oferty. W Zambrowie zarejestrowano 28 ogłoszeń, natomiast w Starych Kupiskach 26. Mniejszą, ale wciąż zauważalną liczbę ofert posiadają Zawady (18), Jednaczewo (17), Konarzyce (17), Giełczyn (15) oraz Budy Czarnockie (14). Pozostałe miejscowości w zestawieniu posiadają mniej niż 14 ogłoszeń na lokalizację.
+
+# %% [markdown]
+# The geographical distribution of offers in the analyzed dataset focuses on several key points. The largest number of listings comes from Łomża, with 159 offers recorded. Another significant location is Nowogród with 63 offers. A substantial group is also formed by Stara Łomża, which collectively across various naming variants (Nad Rzeką, Przy Szosie, Starej Łomży) includes 33 offers. In Zambrów, 28 listings were registered, while in Stare Kupiski there were 26. A smaller but still noticeable number of offers can be found in Zawady (18), Jednaczewo (17), Konarzyce (17), Giełczyn (15), and Budy Czarnockie (14). Other locations in the summary have fewer than 14 listings per location.
+
+# %% [markdown]
+# ### Fixing problem with city naming
+
+# %%
+data["offers"][data["offers"]["CITY"].str.contains("ŁOMŻ")]["CITY"].unique()
+
+# %%
+cities_unification = ['STARA ŁOMŻA NAD RZEKĄ', 'STARA ŁOMŻA PRZY SZOSIE', 'STAREJ ŁOMŻY']
+for city in cities_unification:
+    print(data["offers"].loc[data["offers"]["CITY"].str.contains(city)]["CITY"].unique())
+    data["offers"].loc[data["offers"]["CITY"].str.contains(city),"CITY"] = "STARA ŁOMŻA"
+
+# %%
+data["offers"][data["offers"]["CITY"].str.contains("ŁOMŻ")]["CITY"].unique()
 
 # %%
