@@ -123,7 +123,9 @@
 
 # %%
 import pandas as pd
-import matplotlib as plt
+import matplotlib.pyplot as plt
+import geopandas as gpd
+from shapely.geometry import Point
 
 # %% [markdown]
 # # Data loading
@@ -151,7 +153,7 @@ sort_order = ["Poniedziałek", "Wtorek", "Środa", "Czwartek", "Piątek", "Sobot
 ax = (data["offers"]["DAY_NAME_PL"]
       .value_counts()
       .reindex(sort_order)
-      .plot(kind="bar", figsize=(10, 6), color="#4C72B0", edgecolor="black"))
+      .plot(kind="bar", figsize=(4, 4), color="#4C72B0", edgecolor="black"))
 
 
 # %% [markdown]
@@ -169,7 +171,7 @@ data["offers"]["SIZE_SEGMENT"].value_counts()
 # %%
 ax = (data["offers"]["SIZE_SEGMENT"]
       .value_counts()
-      .plot(kind="bar", figsize=(10, 6), color="#4C72B0", edgecolor="black"))
+      .plot(kind="bar", figsize=(4, 4), color="#4C72B0", edgecolor="black"))
 
 # %% [markdown]
 # | Segment                    | Zakres powierzchni/ Area (m²) | Liczba ofert / Number of offers |
@@ -195,7 +197,7 @@ data["offers"]["CITY"].value_counts().nlargest(20)
 
 # %%
 ax = (data["offers"]["CITY"].value_counts().nlargest(20)
-      .plot(kind="bar", figsize=(10, 6), color="#4C72B0", edgecolor="black"))
+      .plot(kind="bar", figsize=(4, 4), color="#4C72B0", edgecolor="black"))
 
 # %% [markdown]
 # Rozkład geograficzny ofert w badanym zbiorze danych koncentruje się wokół kilku kluczowych punktów. Najwięcej ogłoszeń pochodzi z Łomży, gdzie odnotowano 159 ofert. Kolejną istotną lokalizacją jest Nowogród z liczbą 63 ofert. Znaczącą grupę stanowi również Stara Łomża, która łącznie w różnych wariantach nazewnictwa (Nad Rzeką, Przy Szosie, Starej Łomży) obejmuje 33 oferty. W Zambrowie zarejestrowano 28 ogłoszeń, natomiast w Starych Kupiskach 26. Mniejszą, ale wciąż zauważalną liczbę ofert posiadają Zawady (18), Jednaczewo (17), Konarzyce (17), Giełczyn (15) oraz Budy Czarnockie (14). Pozostałe miejscowości w zestawieniu posiadają mniej niż 14 ogłoszeń na lokalizację.
@@ -217,5 +219,51 @@ for city in cities_unification:
 
 # %%
 data["offers"][data["offers"]["CITY"].str.contains("ŁOMŻ")]["CITY"].unique()
+
+# %% [markdown]
+# ### Geopandas
+
+# %%
+data["offers_geopandas"] = data["offers"]
+
+# %%
+file_path = "data/ms_A06_Granice_obrebow_ewidencyjnych.gml"
+
+# %%
+data["boundaries"] = gpd.read_file(file_path)
+
+# %%
+data["offers_geopandas"] = data["offers_geopandas"].dropna(subset=["LAT", "LON"])
+geometry = [Point(xy) for xy in zip(data["offers_geopandas"]["LON"], data["offers_geopandas"]["LAT"])]
+
+# %%
+data["gdf_points"] = gpd.GeoDataFrame(data["offers_geopandas"], geometry=geometry, crs="EPSG:4326")
+
+# %%
+data["boundaries_wgs"] = data["boundaries"].to_crs(epsg=4326)
+
+# %%
+data["gdf_plot"] = gpd.sjoin(data["gdf_points"], data["boundaries_wgs"], how="inner", predicate="within")
+
+# %%
+active_district_indices = data["gdf_plot"].index.unique()
+
+# %%
+data["active_boundaries"] = data["boundaries_wgs"].loc[active_district_indices]
+
+# %%
+fig, ax = plt.subplots(figsize=(15, 12))
+data["boundaries_wgs"].plot(ax=ax, color='lightgrey', edgecolor='grey', alpha=0.5, label='boundaries')
+lomza_boundary = data["boundaries_wgs"][data["boundaries_wgs"]['JPT_NAZWA_'].str.contains(r'^Łomża\b', regex=True, na=False)]
+data["boundaries_wgs"].plot(ax=ax, color='lightgrey', edgecolor='grey', alpha=0.5, label='boundaries')
+lomza_boundary.plot(ax=ax, color='#FFFFE0', edgecolor='#FFD700', linewidth=1.5, alpha=0.9, label='Miasto Łomża')
+data["gdf_plot"].plot(ax=ax, marker='o', color='red', markersize=9, alpha=0.8, label='offers')
+ax.set_axis_off() 
+plt.tight_layout()
+plt.title("unique points on map")
+plt.show()
+
+# %%
+data["boundaries_wgs"]
 
 # %%
