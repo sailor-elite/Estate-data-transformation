@@ -260,10 +260,7 @@ lomza_boundary.plot(ax=ax, color='#FFFFE0', edgecolor='#FFD700', linewidth=1.5, 
 data["gdf_plot"].plot(ax=ax, marker='o', color='red', markersize=9, alpha=0.8, label='offers')
 ax.set_axis_off() 
 plt.tight_layout()
-plt.title("unique points on map")
+plt.title("Unique points on map")
 plt.show()
-
-# %%
-data["boundaries_wgs"]
 
 # %%
