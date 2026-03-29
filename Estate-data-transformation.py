@@ -39,7 +39,23 @@ pl.Config.TT_CHOP_STR_BOUND = 500
 pl.Config.TABLE_WIDTH = 1000     
 pl.Config.set_fmt_str_lengths(1000)
 
+city_map = {
+    "GEŁCZYN": "GIEŁCZYN",
+    "GlŁCZYN": "GIEŁCZYN",
+    "MIASTKÓW": "MIASTKOWO",
+    "NOWODROD": "NOWOGRÓD",
+    "BUDACH CZARNOCKI": "BUDY CZARNOCKIE",
+    "KARWIEŃSKIE BŁOTA II": "BRAK",
+    "KRZEW": "KRZEWO",
+    "SIERZPUTY": "SIERZPUTY MŁODE",
+    "WALKOWA": "BRAK",
+    "LAS": "BRAK",
+    "BRAK": "BRAK",
+    "JEDNOCZEŚWI": "BRAK"
+}
+
 CITIES_GEO = {
+    'ROMOTY': {'lat':53.80214400879721, 'lon':22.650666695341755},
     'ELŻBIECIN': {'lat': 53.1672, 'lon': 22.1231},
     'ZAMBRÓW': {'lat': 52.9856, 'lon': 22.2428},
     'STARE ZAKRZEWO': {'lat': 53.0042, 'lon': 22.2983},
@@ -189,7 +205,10 @@ CITIES_GEO = {
     'SIEMIĘ NADRZECZNE': {'lat': 53.1858, 'lon': 22.0253}, 
     'WYRZYKI': {'lat': 53.1058, 'lon': 22.1553},
     'ROGIENICE WIELKIE': {'lat':53.1616, 'lon':22.044},
-    'KOBYLIN': {'lat':53.293171789627955, 'lon': 22.14513394107225,}
+    'KOBYLIN': {'lat':53.293171789627955, 'lon': 22.14513394107225},
+    'DROŻĘCIN':{'lat':53.257559093803906, 'lon':22.023860100319418},
+    'CHOJNY MŁODE':{'lat':53.15760997932995, 'lon':21.932303477720296},
+    'SIERZPUTY MŁODE': {'lat':53.16337885578543, 'lon':21.98731343276766}
 }
 
 
@@ -541,6 +560,8 @@ data["analyzed_offers"] = data["analyzed_offers"].with_columns(
     pl.col(["LAST_UPDATED", "DATE_ADDED"]).str.to_date(format="%Y-%m-%d")
             )
 
+
+
 data["analyzed_offers"] = data["analyzed_offers"].with_columns(
     pl.col([ "ANNOUNCE_DATE"]).str.to_date(format="%Y-%m-%d")
             )
@@ -559,7 +580,7 @@ data["analyzed_offers"] = data["analyzed_offers"].with_columns(
     .cast(pl.Float64, strict=False)  
 )
 
-data["analyzed_offers"]
+data["analyzed_offers"].head(1)
 
 # +
 stats = data["analyzed_offers"].select([
@@ -607,6 +628,14 @@ data["analyzed_offers"] = data["analyzed_offers"].with_columns(
 
 data["analyzed_offers"] = data["analyzed_offers"].rename({"LOCATION":"CITY"})
 
+data["analyzed_offers"] = data["analyzed_offers"].with_columns(
+    pl.col("CITY")
+    .str.strip_chars()      
+    .str.to_uppercase()     
+    .replace_strict(city_map, default=pl.col("CITY")) 
+    .alias("CITY")
+)
+
 # +
 data["analyzed_offers"] = data["analyzed_offers"].with_columns(
     pl.col("CITY")
@@ -638,6 +667,8 @@ data["analyzed_offers"] = data["analyzed_offers"].with_columns(
 
 data["analyzed_offers"] = data["analyzed_offers"].drop("SEARCH_CITY")
 # -
+
+
 
 data["analyzed_offers"].filter(pl.col("CLEAN_CITY").is_null())["CITY"].unique().to_list()
 
