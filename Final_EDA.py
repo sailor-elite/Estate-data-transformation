@@ -127,6 +127,7 @@ import matplotlib.pyplot as plt
 import geopandas as gpd
 from shapely.geometry import Point
 import seaborn as sns
+import statsmodels
 
 # %% [markdown]
 # # Data loading
@@ -319,53 +320,6 @@ sns.boxplot(
     data=data["offers"], 
     x="SIZE_SEGMENT", 
     y="PRICE", 
-    ax=axes[0], 
-    order=segment_order, 
-    palette="Blues",
-    fliersize=20
-)
-axes[0].set_title("PRICE distribution per area segment", fontsize=14)
-axes[0].set_ylabel("Price (PLN)")
-axes[0].tick_params(axis='x', rotation=45)
-axes[0].set_ylim(0, 3500000) 
-
-sns.boxplot(
-    data=data["offers"], 
-    x="SIZE_SEGMENT", 
-    y="PRICE_M2", 
-    ax=axes[1], 
-    order=segment_order, 
-    palette="Greens",
-    fliersize=20,
-)
-axes[1].set_title("PRICE_M2 distribution per segment", fontsize=14)
-axes[1].set_ylabel("Price per m² (PLN)")
-axes[1].tick_params(axis='x', rotation=45)
-
-axes[1].set_ylim(0, 2000) 
-
-plt.tight_layout()
-plt.show()
-
-# %%
-sns.set_theme(style="whitegrid")
-
-fig, axes = plt.subplots(1, 2, figsize=(18, 12))
-
-segment_order = [
-    "Tiny/Sub-standard", 
-    "Small Plot", 
-    "Medium Plot", 
-    "Large Plot", 
-    "Investment/Small Farm", 
-    "Hectares/Agriculture"
-]
-
-# Wykres 1: PRICE
-sns.boxplot(
-    data=data["offers"], 
-    x="SIZE_SEGMENT", 
-    y="PRICE", 
     hue="SIZE_SEGMENT",   
     dodge=False,          
     ax=axes[0], 
@@ -379,7 +333,6 @@ axes[0].set_ylabel("Price (PLN)")
 axes[0].tick_params(axis='x', rotation=45)
 axes[0].set_ylim(0, 3500000) 
 
-# Wykres 2: PRICE_M2
 sns.boxplot(
     data=data["offers"], 
     x="SIZE_SEGMENT", 
@@ -390,14 +343,53 @@ sns.boxplot(
     order=segment_order, 
     palette="Greens",
     fliersize=10,
-    legend=False           # Wyłączamy zbędną legendę
+    legend=False          
 )
 axes[1].set_title("PRICE_M2 distribution per segment", fontsize=14)
 axes[1].set_ylabel("Price per m² (PLN)")
 axes[1].tick_params(axis='x', rotation=45)
-axes[1].set_ylim(0, 1000)   # Zmniejszyłem limit do 1000, żeby lepiej widzieć mediany
+axes[1].set_ylim(0, 1700)   
 
 plt.tight_layout()
 plt.show()
+
+# %% [markdown]
+# Wykres pudełkowy przedstawia dość istotny problem z wartościami odstającymi (tzw. outliers). W dalszej części, przed tworzeniem modelu należy ten problem rozwiązać.
+
+# %% [markdown]
+# The boxplots reveal a substantial presence of outliers across the segments. To ensure model accuracy, these anomalies must be handled during the data preprocessing stage, prior to training the regression model.
+
+# %%
+data["offers"]
+
+# %%
+sns.set_theme(style="whitegrid")
+fig, ax = plt.subplots(figsize=(12, 7))
+
+sns.regplot(
+    data=data["offers"],
+    x="MAIN_CITY_DIST",
+    y="PRICE_M2",
+    scatter_kws={'alpha':0.5, 's':30, 'color':'#1f77b4'},
+    line_kws={'color':'red', 'lw':3},                  
+    ax=ax,
+    robust = True
+)
+
+ax.set_title("Price per m2 vs distance from city Łomża", fontsize=15, pad=15)
+ax.set_xlabel("Distance from city Łomża (km)", fontsize=12)
+ax.set_ylabel("Price per m2 (PLN)", fontsize=12)
+
+ax.set_ylim(0, 1000) 
+ax.set_xlim(0, 45) 
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Cena za 1m2 wyraźnie spada wraz z oddalaniem się od Łomży. Zastosowanie parametru robust=True pozwala zminimalizować wpływ ofert ekstremalnie drogich, które sztucznie zawyżałyby prognozy standardowej regresji. Dzięki temu linia trendu lepiej oddaje realną wartość typowej działki, potwierdzając, że lokalizacja względem centrum jest kluczowym czynnikiem cenotwórczym.
+
+# %% [markdown]
+# The price per 1m2 decreases as the distance from Łomża increases. Using the robust=True parameter minimizes the impact of extreme outliers that would otherwise artificially inflate standard regression forecasts. As a result, the trend line reflects the real value of a typical plot more accurately, confirming that proximity to the city center is a key price driver.
 
 # %%
