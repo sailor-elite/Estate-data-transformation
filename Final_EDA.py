@@ -263,4 +263,35 @@ plt.tight_layout()
 plt.title("Unique points on map")
 plt.show()
 
+# %% [markdown]
+# ## Price per segment
+
+# %%
+data["offers"]["SIZE_SEGMENT"].value_counts()
+
+# %%
+data["offers"].groupby("SIZE_SEGMENT")[["PRICE", "PRICE_M2"]].agg(["mean", "median"])
+
+# %%
+segment_stats = data["offers"].groupby("SIZE_SEGMENT")[["PRICE", "PRICE_M2"]].agg(["mean", "median"])
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+
+segment_stats["PRICE"].plot(kind="bar", ax=axes[0], color=["#1f77b4", "#aec7e8"], edgecolor="black")
+axes[0].set_title("PRICE per area segment", fontsize=14)
+axes[0].set_ylabel("Price (PLN)")
+axes[0].set_xlabel("Area segment")
+axes[0].legend(["Średnia (Avg)", "Mediana (Median)"])
+axes[0].tick_params(axis='x', rotation=45)
+
+segment_stats["PRICE_M2"].plot(kind="bar", ax=axes[1], color=["#2ca02c", "#98df8a"], edgecolor="black")
+axes[1].set_title("PRICE_M2 per segment ", fontsize=14)
+axes[1].set_ylabel("PRICE_M2 (PLN)")
+axes[1].set_xlabel("Area segment")
+axes[1].legend(["Średnia (Avg)", "Mediana (Median)"])
+axes[1].tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+plt.show()
+
 # %%
