@@ -126,6 +126,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import geopandas as gpd
 from shapely.geometry import Point
+import seaborn as sns
 
 # %% [markdown]
 # # Data loading
@@ -264,7 +265,7 @@ plt.title("Unique points on map")
 plt.show()
 
 # %% [markdown]
-# ## Price per segment
+# ## Price
 
 # %%
 data["offers"]["SIZE_SEGMENT"].value_counts()
@@ -290,6 +291,111 @@ axes[1].set_ylabel("PRICE_M2 (PLN)")
 axes[1].set_xlabel("Area segment")
 axes[1].legend(["Średnia (Avg)", "Mediana (Median)"])
 axes[1].tick_params(axis='x', rotation=45)
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Rynek zdominowany jest przez działki średnie i małe, które łącznie stanowią ponad połowę wszystkich ofert w regionie. Dane wyraźnie potwierdzają ekonomiczny efekt skali, gdzie cena za metr kwadratowy drastycznie spada wraz ze wzrostem powierzchni, osiągając najniższe wartości dla gruntów rolnych. We wszystkich segmentach średnia arytmetyczna jest znacząco wyższa od mediany, co jednoznacznie wskazuje na obecność ekstremalnie drogich ofert odchylających statystyki. Co ciekawe, mediana ceny całkowitej dla działek małych i średnich oscyluje w podobnych granicach 150–155 tysięcy złotych.
+
+# %% [markdown]
+# The market is dominated by medium and small plots, which together account for more than half of all listings in the region. The data clearly confirm the economic effect of scale, where the price per square meter drops drastically as the area increases, reaching its lowest values for agricultural land. In all segments, the arithmetic mean is significantly higher than the median, clearly indicating the presence of extremely expensive offers that skew the statistics. Interestingly, the median total price for small and medium plots oscillates within similar boundaries of 150–155 thousand PLN.
+
+# %%
+sns.set_theme(style="whitegrid")
+
+fig, axes = plt.subplots(1, 2, figsize=(18, 12))
+
+segment_order = [
+    "Tiny/Sub-standard", 
+    "Small Plot", 
+    "Medium Plot", 
+    "Large Plot", 
+    "Investment/Small Farm", 
+    "Hectares/Agriculture"
+]
+
+sns.boxplot(
+    data=data["offers"], 
+    x="SIZE_SEGMENT", 
+    y="PRICE", 
+    ax=axes[0], 
+    order=segment_order, 
+    palette="Blues",
+    fliersize=20
+)
+axes[0].set_title("PRICE distribution per area segment", fontsize=14)
+axes[0].set_ylabel("Price (PLN)")
+axes[0].tick_params(axis='x', rotation=45)
+axes[0].set_ylim(0, 3500000) 
+
+sns.boxplot(
+    data=data["offers"], 
+    x="SIZE_SEGMENT", 
+    y="PRICE_M2", 
+    ax=axes[1], 
+    order=segment_order, 
+    palette="Greens",
+    fliersize=20,
+)
+axes[1].set_title("PRICE_M2 distribution per segment", fontsize=14)
+axes[1].set_ylabel("Price per m² (PLN)")
+axes[1].tick_params(axis='x', rotation=45)
+
+axes[1].set_ylim(0, 2000) 
+
+plt.tight_layout()
+plt.show()
+
+# %%
+sns.set_theme(style="whitegrid")
+
+fig, axes = plt.subplots(1, 2, figsize=(18, 12))
+
+segment_order = [
+    "Tiny/Sub-standard", 
+    "Small Plot", 
+    "Medium Plot", 
+    "Large Plot", 
+    "Investment/Small Farm", 
+    "Hectares/Agriculture"
+]
+
+# Wykres 1: PRICE
+sns.boxplot(
+    data=data["offers"], 
+    x="SIZE_SEGMENT", 
+    y="PRICE", 
+    hue="SIZE_SEGMENT",   
+    dodge=False,          
+    ax=axes[0], 
+    order=segment_order, 
+    palette="Blues",
+    fliersize=10,          
+    legend=False          
+)
+axes[0].set_title("PRICE distribution per area segment", fontsize=14)
+axes[0].set_ylabel("Price (PLN)")
+axes[0].tick_params(axis='x', rotation=45)
+axes[0].set_ylim(0, 3500000) 
+
+# Wykres 2: PRICE_M2
+sns.boxplot(
+    data=data["offers"], 
+    x="SIZE_SEGMENT", 
+    y="PRICE_M2", 
+    hue="SIZE_SEGMENT",    
+    dodge=False,           
+    ax=axes[1], 
+    order=segment_order, 
+    palette="Greens",
+    fliersize=10,
+    legend=False           # Wyłączamy zbędną legendę
+)
+axes[1].set_title("PRICE_M2 distribution per segment", fontsize=14)
+axes[1].set_ylabel("Price per m² (PLN)")
+axes[1].tick_params(axis='x', rotation=45)
+axes[1].set_ylim(0, 1000)   # Zmniejszyłem limit do 1000, żeby lepiej widzieć mediany
 
 plt.tight_layout()
 plt.show()
