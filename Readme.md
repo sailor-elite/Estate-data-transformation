@@ -2,6 +2,10 @@
 
 Jupyter Notebooks designed to process, transform, and analyze real estate listings of building plots in the vicinity of Łomża.
 
+<div align="center">
+  <img src="estate-scrapper-process.drawio.png" alt="Project Workflow" width="40%">
+</div>
+
 ## Workflow
 
 * **Fetch:** Connects to a remote VPS database via SSH/SCP to download scraped and LLM-processed listings (`olx.db`).
