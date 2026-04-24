@@ -6,6 +6,10 @@ Jupyter Notebooks designed to process, transform, and analyze real estate listin
   <img src="estate-scrapper-process.drawio.png" alt="Project Workflow" width="40%">
 </div>
 
+### Related Repositories
+* **Data Processing & LLM:** [building-plots-bielik-processor](https://github.com/sailor-elite/building-plots-bielik-processor)
+* **Transformation & EDA:** [Estate-data-transformation](https://github.com/sailor-elite/Estate-data-transformation/)
+
 ## Workflow
 
 * **Fetch:** Connects to a remote VPS database via SSH/SCP to download scraped and LLM-processed listings (`olx.db`).
